@@ -1,79 +1,78 @@
 from sheets import read_sheet
+import pandas as pd
 
-# Get available pilots
+
+# Normalize column names
+def normalize_columns(df):
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+    return df
+
+
+# Safe column getter
+def get_column(df, possible_names):
+    for name in possible_names:
+        if name in df.columns:
+            return name
+    return None
+
+
+# Get available pilots safely
 def get_available_pilots():
-    pilots = read_sheet("Pilot_Roster")
+    try:
+        pilots = read_sheet("pilots")
 
-    available = pilots[
-        (pilots["current_assignment"] == "-") |
-        (pilots["current_assignment"].isna())
-    ]
+        if pilots is None or len(pilots) == 0:
+            return "No pilots data found."
 
-    return available
+        pilots = normalize_columns(pilots)
 
-# Get available drones
+        status_col = get_column(pilots, ["status", "availability"])
+        assignment_col = get_column(pilots, ["current_assignment", "assignment", "assigned"])
+
+        if status_col:
+            available = pilots[pilots[status_col].astype(str).str.lower() == "available"]
+
+        elif assignment_col:
+            available = pilots[pilots[assignment_col].astype(str).isin(["", "-", "none", "null"])]
+
+        else:
+            return f"No availability column found. Columns: {list(pilots.columns)}"
+
+        if len(available) == 0:
+            return "No available pilots."
+
+        return available.to_string(index=False)
+
+    except Exception as e:
+        return f"Error reading pilots data: {str(e)}"
+
+
+# Get available drones safely
 def get_available_drones():
-    drones = read_sheet("Drone_Fleet")
-    available = drones[drones["status"].str.lower() == "available"]
-    return available
+    try:
+        drones = read_sheet("drones")
 
+        if drones is None or len(drones) == 0:
+            return "No drones data found."
 
-# Get missions
-def get_all_missions():
-    missions = read_sheet("Missions")
-    return missions
+        drones = normalize_columns(drones)
 
+        status_col = get_column(drones, ["status", "availability"])
 
-# Detect pilot conflicts (double booking)
-def detect_pilot_conflicts():
-    missions = read_sheet("Missions")
+        if status_col is None:
+            return f"No status column found. Columns: {list(drones.columns)}"
 
-    # Print columns to debug
-    print("Mission columns:", missions.columns)
+        available = drones[drones[status_col].astype(str).str.lower() == "available"]
 
-    conflicts = []
+        if len(available) == 0:
+            return "No available drones."
 
-    # Use correct column name
-    pilot_column = None
+        return available.to_string(index=False)
 
-    # Detect correct pilot column automatically
-    for col in missions.columns:
-        if "pilot" in col.lower():
-            pilot_column = col
-            break
-
-    if pilot_column is None:
-        return ["No pilot column found in Missions sheet"]
-
-    for i in range(len(missions)):
-        for j in range(i + 1, len(missions)):
-
-            pilot1 = missions.iloc[i][pilot_column]
-            pilot2 = missions.iloc[j][pilot_column]
-
-            start1 = missions.iloc[i]["start_date"]
-            end1 = missions.iloc[i]["end_date"]
-
-            start2 = missions.iloc[j]["start_date"]
-            end2 = missions.iloc[j]["end_date"]
-
-            if pilot1 == pilot2:
-                if not (end1 < start2 or end2 < start1):
-                    conflicts.append(
-                        f"Conflict: Pilot {pilot1} between missions "
-                        f"{missions.iloc[i]['mission_id']} and "
-                        f"{missions.iloc[j]['mission_id']}"
-                    )
-
-    return conflicts
-
-
-# Match pilots to mission based on skill
-def find_matching_pilots(required_skill):
-    pilots = read_sheet("Pilot_Roster")
-
-    matching = pilots[
-        pilots["skills"].str.contains(required_skill, case=False, na=False)
-    ]
-
-    return matching
+    except Exception as e:
+        return f"Error rea

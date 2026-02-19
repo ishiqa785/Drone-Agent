@@ -1,63 +1,28 @@
-from logic import (
-    get_available_pilots,
-    get_available_drones,
-    detect_pilot_conflicts,
-    find_matching_pilots,
-)
+from logic import get_available_pilots, get_available_drones
 
 
-def handle_query(user_input):
+def handle_query(query):
+    query = query.lower()
 
-    user_input = user_input.lower()
+    try:
 
-    # Available pilots
-    if "available pilots" in user_input:
-        pilots = get_available_pilots()
+        if "pilot" in query:
+            return get_available_pilots()
 
-        if pilots.empty:
-            return "No pilots available."
+        elif "drone" in query:
+            return get_available_drones()
 
-        return pilots.to_string(index=False)
+        elif "conflict" in query:
+            return "Conflict detection not implemented yet."
 
-    # Available drones
-    elif "available drones" in user_input:
-        drones = get_available_drones()
-
-        if drones.empty:
-            return "No drones available."
-
-        return drones.to_string(index=False)
-
-    # Conflicts
-    elif "conflict" in user_input:
-        conflicts = detect_pilot_conflicts()
-
-        if not conflicts:
-            return "No conflicts detected."
-
-        return str(conflicts)
-
-    # Skill matching
-    elif "find pilot with skill" in user_input:
-
-        words = user_input.split()
-        skill = words[-1]
-
-        pilots = find_matching_pilots(skill)
-
-        if pilots.empty:
-            return f"No pilots found with skill {skill}"
-
-        return pilots.to_string(index=False)
-
-    else:
-        return """I can help with:
-        
-• Show available pilots
-• Show available drones
-• Detect conflicts
-• Find pilot with skill mapping
-
-Example:
-'show available pilots'
+        else:
+            return """
+Supported queries:
+• show available pilots
+• show available drones
+• show pilots
+• show drones
 """
+
+    except Exception as e:
+        return f"System error: {str(e)}"
